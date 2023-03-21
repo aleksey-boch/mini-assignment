@@ -9,12 +9,10 @@ class Itinerary:
     destination: str
 
     def __eq__(self, other):
-        return all(
-            (
-                self.origin == other.origin,
-                self.destination == other.destination,
-            )
-        )
+        return all((
+            self.origin == other.origin,
+            self.destination == other.destination,
+        ))
 
 
 @dataclass(init=False)
@@ -84,19 +82,19 @@ class Bookings(list[BookingEntity]):
         )
         super().append(booking)
 
-    def select_before_date(self, dt: datetime) -> list:
+    def select_before_date(self, dt: datetime):
         """Select bookings departing before a given time
 
         :param dt: A given time
         :return: List of bookings
         """
-        return [booking for booking in self if booking.departure_at < dt]
+        return (booking for booking in self if booking.departure_at < dt)
 
-    def select_layover(self, origin: str, destination: str) -> list:
+    def select_layover(self, origin: str, destination: str):
         """Select bookings visiting two airports sequentially.
 
         :param origin: Origin airport
         :param destination: destination airport
         :return: List of bookings
         """
-        return [booking for booking in self if booking.has_layover(origin, destination)]
+        return (booking for booking in self if booking.has_layover(origin, destination))
