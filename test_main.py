@@ -21,89 +21,117 @@ class TestBookingEntity(TestCase):
         bruce = BookingEntity(
             pax_name='Bruce',
             departure=datetime(2020, 6, 4, 11, 4),
-            itineraries=[Itinerary('GVA', 'AMS')],
+            origin='GVA',
+            destination='AMS',
         )
-        bruce.add_itinerary(Itinerary('AMS', 'LHR'))
+        bruce.add_itinerary('LHR')
 
-        self.assertEqual(len(bruce.itineraries), 2)
+        self.assertEqual(2, len(bruce.layovers))
+
+    def test_add_itineraries(self):
+        bruce = BookingEntity(
+            pax_name='Bruce',
+            departure=datetime(2020, 6, 4, 11, 4),
+            origin='GVA',
+            destination='AMS',
+        )
+        bruce.add_itineraries(['LHR', 'JFK', 'SFO'])
+
+        self.assertEqual(4, len(bruce.layovers))
 
 
 class TestBookings(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.bookings = Bookings()
+    def setUp(self):
+        self.bookings = Bookings()
 
     def _get_alice_booking(self) -> BookingEntity:
         return BookingEntity(
             pax_name='Alice',
             departure=datetime(2020, 5, 26, 6, 45),
-            itineraries=[Itinerary('LHR', 'AMS')],
+            origin='LHR',
+            destination='AMS',
         )
 
     def _get_bruce_booking(self) -> BookingEntity:
         bruce = BookingEntity(
             pax_name='Bruce',
             departure=datetime(2020, 6, 4, 11, 4),
-            itineraries=[Itinerary('GVA', 'AMS')],
+            origin='GVA',
+            destination='AMS',
         )
-        bruce.add_itinerary(Itinerary('AMS', 'LHR'))
+        bruce.add_itinerary('LHR')
         return bruce
 
     def _get_cindy_booking(self) -> BookingEntity:
         cindy = BookingEntity(
             pax_name='Cindy',
             departure=datetime(2020, 6, 6, 10, 0),
-            itineraries=[Itinerary('AAL', 'AMS'), Itinerary('AMS', 'LHR')],
+            origin='AAL',
+            destination='AMS',
         )
-        cindy.add_itinerary([Itinerary('LHR', 'JFK'), Itinerary('JFK', 'SFO')])
-
+        cindy.add_itineraries(['LHR', 'JFK', 'SFO'])
         return cindy
 
     def test_append(self):
         alice = self._get_alice_booking()
         self.bookings.append(alice)
-        self.assertEqual(len(self.bookings), 1)
+        self.assertEqual(1, len(self.bookings))
 
     def test_extend(self):
         alice = self._get_alice_booking()
         bruce = self._get_bruce_booking()
         self.bookings.extend((alice, bruce))
-        self.assertEqual(len(self.bookings), 2)
+        self.assertEqual(2, len(self.bookings))
 
-    def test_select_itinerary_before_date(self):
+    def test_add_booking(self):
+        self.bookings.add_booking(
+            pax_name='Alice',
+            departure=datetime(2020, 5, 26, 6, 45),
+            origin='LHR',
+            destination='AMS',
+        )
+        self.assertEqual(1, len(self.bookings))
+
+    def test_select_before_date(self):
         alice = self._get_alice_booking()
         bruce = self._get_bruce_booking()
         cindy = self._get_cindy_booking()
         self.bookings.extend((alice, bruce, cindy))
 
-        data = self.bookings.select_itinerary_before_date(dt=datetime(2020, 6, 6, 9, 0))
+        data = self.bookings.select_before_date(dt=datetime(2020, 6, 6, 9, 0))
         names = [t.pax_name for t in data]
-        self.assertEqual(names, ['Alice', 'Bruce'])
+        self.assertEqual(['Alice', 'Bruce'], names)
 
-    def test_select_itinerary(self):
+    def test_select_layover(self):
         alice = self._get_alice_booking()
         bruce = self._get_bruce_booking()
         cindy = self._get_cindy_booking()
-        derek = BookingEntity(
+        self.bookings.extend((alice, bruce, cindy))
+
+        self.bookings.add_booking(
             pax_name='Derek',
             departure=datetime(2020, 6, 12, 8, 9),
-            itineraries=[Itinerary('AMS', 'LHR')],
+            origin='AMS',
+            destination='LHR',
         )
 
         erica = BookingEntity(
             pax_name='Erica',
             departure=datetime(2020, 6, 13, 20, 40),
-            itineraries=[Itinerary('ATL', 'AMS'), Itinerary('AMS', 'AAL')],
+            origin='ATL',
+            destination='AMS',
         )
+        erica.add_itinerary('AAL')
 
         fred = BookingEntity(
             pax_name='Fred',
             departure=datetime(2020, 6, 14, 9, 10),
-            itineraries=[Itinerary('AMS', 'CDG'), Itinerary('CDG', 'LHR')],
+            origin='AMS',
+            destination='CDG',
         )
+        fred.add_itinerary('LHR')
+        self.bookings.extend((erica, fred))
 
-        self.bookings.extend((alice, bruce, cindy, derek, erica, fred))
-
-        data = self.bookings.select_itinerary(Itinerary('AMS', 'LHR'))
+        data = self.bookings.select_layover('AMS', 'LHR')
         names = [t.pax_name for t in data]
-        self.assertEqual(names, ['Bruce', 'Cindy', 'Derek'])
+        self.assertEqual(['Bruce', 'Cindy', 'Derek'], names)
